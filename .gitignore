@@ -4,8 +4,6 @@ dist/
 web-build/
 android/
 ios/
-build-local.bat
-build-log.txt
 *.orig.*
 *.jks
 *.p8

@@ -4,6 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import ViewShot from 'react-native-view-shot';
 import { curatedPages } from '../data/curatedPages';
+import { getMandalaPage, getPatternPage } from '../data/patternGenerator';
 import { ColoringPage } from '../data/shapeTypes';
 import PageThumb from '../components/PageThumb';
 import WatermarkedArtwork from '../components/WatermarkedArtwork';
@@ -16,7 +17,12 @@ import {
 import { preparePhotoForCanvas } from '../utils/photoImport';
 import { shareArtworkFile } from '../utils/exportImage';
 
-type Tab = 'scenes' | 'dinosaurs' | 'mammals' | 'animals' | 'people' | 'things' | 'plants' | 'saved' | 'custom';
+type Tab = 'scenes' | 'dinosaurs' | 'mammals' | 'animals' | 'people' | 'things' | 'plants' | 'mandalas' | 'patterns' | 'saved' | 'custom';
+
+// Small, fixed libraries — no infinite scroll. Keeps the memory/GPU cost of
+// the generated-thumbnail tabs bounded (these tabs were a crash source).
+const MANDALA_COUNT = 12;
+const PATTERN_COUNT = 6;
 
 export default function ColoringHubScreen({ navigation }: any) {
   const [tab, setTab] = useState<Tab>('scenes');
@@ -38,6 +44,8 @@ export default function ColoringHubScreen({ navigation }: any) {
   );
 
   const pages: ColoringPage[] = useMemo(() => {
+    if (tab === 'mandalas') return Array.from({ length: MANDALA_COUNT }, (_, i) => getMandalaPage(i + 1));
+    if (tab === 'patterns') return Array.from({ length: PATTERN_COUNT }, (_, i) => getPatternPage(i + 1));
     if (tab === 'scenes') return curatedPages.filter((p) => p.category === 'scenes');
     if (tab === 'dinosaurs') return curatedPages.filter((p) => p.category === 'dinosaurs');
     if (tab === 'mammals') return curatedPages.filter((p) => p.category === 'mammals');
@@ -168,17 +176,7 @@ export default function ColoringHubScreen({ navigation }: any) {
         removeClippedSubviews
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.savedCard} onPress={() => handleDeleteSaved(item)}>
-            <Image
-              source={{ uri: item.imageUri }}
-              style={styles.savedImage}
-              resizeMode="cover"
-              defaultSource={{ uri: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==' }}
-              onError={() => {
-                // Image file missing - remove this stale entry
-                deleteSavedArtwork(item.id);
-                setSavedArtworks((prev) => prev.filter((a) => a.id !== item.id));
-              }}
-            />
+            <Image source={{ uri: item.imageUri }} style={styles.savedImage} resizeMode="cover" />
             <Text style={styles.savedTitle} numberOfLines={1}>{item.title}</Text>
             <Text style={styles.savedDate}>{new Date(item.savedAt).toLocaleDateString()}</Text>
           </TouchableOpacity>
