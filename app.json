@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "TinyFin Kids",
+    "slug": "tinyfin",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFF8ED"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tinyfin.app",
+      "infoPlist": {
+        "UIBackgroundModes": []
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#FFF8ED"
+      },
+      "package": "com.tinyfin.app",
+      "permissions": [
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-av",
+        {
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "TinyFin Kids needs access to your photos to import coloring worksheets.",
+          "cameraPermission": "TinyFin Kids needs camera access to scan paper worksheets."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "5fa5e26c-2381-4e6a-87f4-4e0fc313fd06"
+      }
+    },
+    "owner": "upendra_chokka"
+  }
+}
