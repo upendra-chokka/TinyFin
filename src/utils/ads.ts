@@ -15,9 +15,9 @@
 
 // Google's official test ad unit IDs (safe to use during development)
 export const AD_CONFIG = {
-  // Replace with your real AdMob App ID in app.json → plugins
-  BANNER_ID: 'ca-app-pub-3940256099942544/6300978111', // Test banner
-  INTERSTITIAL_ID: 'ca-app-pub-3940256099942544/1033173712', // Test interstitial
+  // Real AdMob ad unit IDs
+  BANNER_ID: 'ca-app-pub-8752827806822572/8021139987',
+  INTERSTITIAL_ID: 'ca-app-pub-8752827806822572/9142649962',
 };
 
 // Track how many activities completed — show interstitial every 3rd completion
