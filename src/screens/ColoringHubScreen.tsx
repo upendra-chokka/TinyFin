@@ -269,7 +269,6 @@ export default function ColoringHubScreen({ navigation }: any) {
           { key: 'people' as Tab, label: '👮 People' },
           { key: 'things' as Tab, label: '🚂 Things' },
           { key: 'plants' as Tab, label: '🌻 Plants' },
-          { key: 'saved' as Tab, label: '💾 Saved' },
           { key: 'custom' as Tab, label: '📥 Custom' },
         ]).map((t) => (
           <TouchableOpacity key={t.key} onPress={() => setTab(t.key)} style={[styles.tab, tab === t.key && styles.tabOn]}>
@@ -278,7 +277,7 @@ export default function ColoringHubScreen({ navigation }: any) {
         ))}
       </View>
 
-      {tab === 'saved' ? renderSavedTab() : tab === 'custom' ? renderCustomTab() : renderPagesTab()}
+      {tab === 'custom' ? renderCustomTab() : renderPagesTab()}
 
       {/* Off-screen watermark capture surface for Export. Only mounted while
           an export is in flight; positioned far off-screen so it's never seen. */}
