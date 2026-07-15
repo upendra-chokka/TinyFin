@@ -1,10 +1,13 @@
 import React, { useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
+import { InterstitialAd, AdEventType } from 'react-native-google-mobile-ads';
 import BrushCanvas, { BrushTool, BrushCanvasRef } from '../components/BrushCanvas';
 import ColorPalette from '../components/ColorPalette';
 import { colors, radii } from '../theme/tokens';
 import { sounds } from '../utils/sound';
 import { markPageComplete, saveArtwork, setIsPremium, saveSnapshotToFile } from '../utils/storage';
+import { usePremium } from '../utils/premium';
+import { AD_CONFIG, incrementCompletion } from '../utils/ads';
 
 const TOOLS: { key: BrushTool; label: string; emoji: string }[] = [
   { key: 'marker', label: 'Marker', emoji: '🖊️' },
@@ -22,6 +25,26 @@ export default function ColoringCanvasScreen({ route, navigation }: any) {
   const [undoSignal, setUndoSignal] = useState(0);
   const [unlocked, setUnlocked] = useState(!locked);
   const canvasRef = useRef<BrushCanvasRef>(null);
+  const { isPremium } = usePremium();
+
+  // Show interstitial ad every 3rd completion (only if not premium)
+  const showInterstitialIfNeeded = () => {
+    if (isPremium) return;
+    const shouldShow = incrementCompletion();
+    if (shouldShow) {
+      try {
+        const interstitial = InterstitialAd.createForAdRequest(AD_CONFIG.INTERSTITIAL_ID, {
+          requestNonPersonalizedAdsOnly: true,
+        });
+        interstitial.addAdEventListener(AdEventType.LOADED, () => {
+          interstitial.show();
+        });
+        interstitial.load();
+      } catch (e) {
+        // Fail silently — never crash for an ad
+      }
+    }
+  };
 
   if (!unlocked) {
     return (
@@ -61,10 +84,17 @@ export default function ColoringCanvasScreen({ route, navigation }: any) {
               const imageUri = await saveSnapshotToFile(base64, id);
               await saveArtwork({ id, title: page.title, imageUri, savedAt: Date.now() });
             }
+            showInterstitialIfNeeded();
             navigation.goBack();
           },
         },
-        { text: "Don't save", onPress: () => navigation.goBack() },
+        {
+          text: "Don't save",
+          onPress: () => {
+            showInterstitialIfNeeded();
+            navigation.goBack();
+          },
+        },
         { text: 'Keep coloring', style: 'cancel' },
       ],
     );

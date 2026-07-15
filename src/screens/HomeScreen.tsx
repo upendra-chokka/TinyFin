@@ -1,6 +1,8 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
 import { colors, radii, shadow } from '../theme/tokens';
+import { usePremium } from '../utils/premium';
+import AdBanner from '../components/AdBanner';
 
 const CARDS = [
   { key: 'ColoringHub', emoji: '🖌️', label: 'Coloring', sub: 'Marker, crayon & brush', bg: colors.berry },
@@ -12,13 +14,34 @@ const CARDS = [
 ];
 
 export default function HomeScreen({ navigation }: any) {
+  const { isPremium, purchasePremium, restorePurchase } = usePremium();
+
+  const handleUpgrade = () => {
+    Alert.alert(
+      '⭐ Go Premium',
+      'Remove all ads and unlock every coloring page for just $0.99!',
+      [
+        {
+          text: 'Buy $0.99',
+          onPress: async () => {
+            await purchasePremium();
+            Alert.alert('Thank you!', 'Ads removed and everything unlocked!');
+          },
+        },
+        { text: 'Restore Purchase', onPress: restorePurchase },
+        { text: 'Not now', style: 'cancel' },
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.brand}>
         <Text style={styles.mascot}>🐠</Text>
-        <Text style={styles.title}>TinyFin</Text>
+        <Text style={styles.title}>TinyFin Kids</Text>
         <Text style={styles.subtitle}>PLAY · LEARN · GROW</Text>
       </View>
+
       <View style={styles.grid}>
         {CARDS.map((c) => (
           <TouchableOpacity
@@ -33,6 +56,16 @@ export default function HomeScreen({ navigation }: any) {
           </TouchableOpacity>
         ))}
       </View>
+
+      {/* Remove Ads / Premium button */}
+      {!isPremium && (
+        <TouchableOpacity style={styles.upgradeBtn} onPress={handleUpgrade}>
+          <Text style={styles.upgradeText}>⭐ Remove Ads — $0.99</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Banner ad at bottom */}
+      <AdBanner />
     </SafeAreaView>
   );
 }
@@ -48,4 +81,13 @@ const styles = StyleSheet.create({
   cardEmoji: { fontSize: 34, marginBottom: 6 },
   cardLabel: { fontSize: 18, fontWeight: '800', color: '#fff' },
   cardSub: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.9)', marginTop: 2 },
+  upgradeBtn: {
+    backgroundColor: colors.sun,
+    borderRadius: radii.pill,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 14,
+    marginBottom: 8,
+  },
+  upgradeText: { fontWeight: '800', fontSize: 14, color: colors.ink },
 });

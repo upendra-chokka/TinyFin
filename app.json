@@ -49,6 +49,12 @@
           "photosPermission": "TinyFin Kids needs access to your photos to import coloring worksheets.",
           "cameraPermission": "TinyFin Kids needs camera access to scan paper worksheets."
         }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713"
+        }
       ]
     ],
     "extra": {
