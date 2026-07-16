@@ -35,6 +35,12 @@ jobs:
       - name: Generate Android project
         run: npx expo prebuild --platform android --clean
 
+      - name: Force targetSdkVersion 35
+        run: |
+          cd android
+          sed -i "s/targetSdkVersion = .*/targetSdkVersion = 35/" build.gradle
+          sed -i "s/compileSdkVersion = .*/compileSdkVersion = 35/" build.gradle
+
       - name: Decode signing keystore
         run: |
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/tinyfin-release.keystore
