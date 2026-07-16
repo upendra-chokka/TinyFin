@@ -4,6 +4,12 @@ dist/
 web-build/
 android/
 ios/
+*.keystore
+*.jks
+tinyfin-key-base64.txt
+output.zip
+pepk.jar
+encryption_public_key.pem
 *.orig.*
 *.jks
 *.p8
