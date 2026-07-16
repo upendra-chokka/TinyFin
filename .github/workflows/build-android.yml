@@ -37,58 +37,57 @@ jobs:
 
       - name: Force targetSdkVersion 35
         run: |
-          cd android
-          sed -i "s/targetSdkVersion = .*/targetSdkVersion = 35/" build.gradle
-          sed -i "s/compileSdkVersion = .*/compileSdkVersion = 35/" build.gradle
+          sed -i "s/targetSdkVersion = .*/targetSdkVersion = 35/" android/build.gradle
+          sed -i "s/compileSdkVersion = .*/compileSdkVersion = 35/" android/build.gradle
 
       - name: Decode signing keystore
-        run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/tinyfin-release.keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/tinyfin-release.keystore
 
-      - name: Configure signing in build.gradle
-        run: |
-          cd android/app
-          # Insert signing config before the buildTypes block
-          sed -i '/buildTypes {/i \
-          signingConfigs {\
-              release {\
-                  storeFile file("tinyfin-release.keystore")\
-                  storePassword System.getenv("KEYSTORE_PASSWORD") ?: ""\
-                  keyAlias System.getenv("KEY_ALIAS") ?: ""\
-                  keyPassword System.getenv("KEYSTORE_PASSWORD") ?: ""\
-              }\
-          }' build.gradle
-          # Set release buildType to use release signing config
-          sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/' build.gradle
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-
-      - name: Build signed APK
+      - name: Build debug APK (unsigned)
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          ./gradlew assembleDebug --no-daemon
 
-      - name: Build signed AAB
+      - name: Build debug AAB (unsigned)
         run: |
           cd android
-          ./gradlew bundleRelease --no-daemon
-        env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          ./gradlew bundleDebug --no-daemon
+
+      - name: Sign APK with jarsigner
+        run: |
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore android/app/tinyfin-release.keystore \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -keypass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            android/app/build/outputs/apk/debug/app-debug.apk \
+            "${{ secrets.KEY_ALIAS }}"
+
+      - name: Zipalign APK
+        run: |
+          ${ANDROID_HOME}/build-tools/34.0.0/zipalign -v 4 \
+            android/app/build/outputs/apk/debug/app-debug.apk \
+            android/app/build/outputs/apk/debug/app-release-signed.apk
+
+      - name: Sign AAB with jarsigner
+        run: |
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 \
+            -keystore android/app/tinyfin-release.keystore \
+            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -keypass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            android/app/build/outputs/bundle/debug/app-debug.aab \
+            "${{ secrets.KEY_ALIAS }}"
+          cp android/app/build/outputs/bundle/debug/app-debug.aab \
+            android/app/build/outputs/bundle/debug/app-release-signed.aab
 
       - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
           name: tinyfin-kids-apk-signed
-          path: android/app/build/outputs/apk/release/app-release.apk
+          path: android/app/build/outputs/apk/debug/app-release-signed.apk
 
       - name: Upload signed AAB
         uses: actions/upload-artifact@v4
         with:
           name: tinyfin-kids-aab-signed
-          path: android/app/build/outputs/bundle/release/app-release.aab
+          path: android/app/build/outputs/bundle/debug/app-release-signed.aab
