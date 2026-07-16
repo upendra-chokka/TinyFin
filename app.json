@@ -27,6 +27,8 @@
         "backgroundColor": "#FFF8ED"
       },
       "package": "com.tinyfin.app",
+      "compileSdkVersion": 35,
+      "targetSdkVersion": 35,
       "permissions": [
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "android.permission.CAMERA",
