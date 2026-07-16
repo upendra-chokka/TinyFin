@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, SafeAreaView, Image, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, SafeAreaView, Image, Alert, ActivityIndicator, Platform } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import ViewShot from 'react-native-view-shot';
@@ -85,8 +85,12 @@ export default function ColoringHubScreen({ navigation }: any) {
       {
         text: '🖼️ Choose from gallery',
         onPress: async () => {
-          const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-          if (status !== 'granted') { Alert.alert('Permission needed', 'Please allow photo access.'); return; }
+          // Android's system photo picker grants access only to the selected image,
+          // so broad photo-library permission is neither needed nor requested.
+          if (Platform.OS !== 'android') {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') { Alert.alert('Permission needed', 'Please allow photo access.'); return; }
+          }
           const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.8 });
           if (!r.canceled && r.assets[0]) await addWorksheetFromAsset(r.assets[0].uri, `Worksheet ${importedSheets.length + 1}`);
         },
