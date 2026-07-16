@@ -1,14 +1,14 @@
-name: Build Android APK & AAB
+name: Build Android APK & AAB (Signed)
 
 on:
   push:
     branches: [main]
-  workflow_dispatch: # Allows manual trigger from GitHub UI
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout code
@@ -35,25 +35,54 @@ jobs:
       - name: Generate Android project
         run: npx expo prebuild --platform android --clean
 
-      - name: Build APK (debug)
+      - name: Decode signing keystore
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/tinyfin-release.keystore
+
+      - name: Configure signing in build.gradle
+        run: |
+          cd android/app
+          # Insert signing config before the buildTypes block
+          sed -i '/buildTypes {/i \
+          signingConfigs {\
+              release {\
+                  storeFile file("tinyfin-release.keystore")\
+                  storePassword System.getenv("KEYSTORE_PASSWORD") ?: ""\
+                  keyAlias System.getenv("KEY_ALIAS") ?: ""\
+                  keyPassword System.getenv("KEYSTORE_PASSWORD") ?: ""\
+              }\
+          }' build.gradle
+          # Set release buildType to use release signing config
+          sed -i 's/signingConfig signingConfigs.debug/signingConfig signingConfigs.release/' build.gradle
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+
+      - name: Build signed APK
         run: |
           cd android
           chmod +x gradlew
           ./gradlew assembleRelease --no-daemon
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
 
-      - name: Build AAB (production)
+      - name: Build signed AAB
         run: |
           cd android
           ./gradlew bundleRelease --no-daemon
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
 
-      - name: Upload APK artifact
+      - name: Upload signed APK
         uses: actions/upload-artifact@v4
         with:
-          name: tinyfin-kids-apk
+          name: tinyfin-kids-apk-signed
           path: android/app/build/outputs/apk/release/app-release.apk
 
-      - name: Upload AAB artifact
+      - name: Upload signed AAB
         uses: actions/upload-artifact@v4
         with:
-          name: tinyfin-kids-aab
+          name: tinyfin-kids-aab-signed
           path: android/app/build/outputs/bundle/release/app-release.aab
