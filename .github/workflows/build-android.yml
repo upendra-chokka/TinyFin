@@ -37,7 +37,11 @@ jobs:
 
       - name: Force targetSdkVersion 35
         run: |
-          echo "Keeping default targetSdkVersion from Expo (34)"
+          echo "Keeping default targetSdkVersion from Expo (35)"
+
+      - name: Fix Kotlin version for Compose compatibility
+        run: |
+          sed -i "s/kotlinVersion = .*/kotlinVersion = '1.9.25'/" android/build.gradle
 
       - name: Decode signing keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/tinyfin-release.keystore
