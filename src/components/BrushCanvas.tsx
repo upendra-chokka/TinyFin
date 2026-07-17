@@ -161,13 +161,11 @@ const BrushCanvas = forwardRef<BrushCanvasRef, Props>(({
   };
 
   const handleEnd = () => {
-    if (currentStroke.current) {
-      setStrokes((prev) => {
-        const next = [...prev, currentStroke.current!];
-        onStrokeEnd?.(next.length);
-        return next;
-      });
+    const finishedStroke = currentStroke.current;
+    if (finishedStroke) {
       currentStroke.current = null;
+      setStrokes((prev) => [...prev, finishedStroke]);
+      onStrokeEnd?.(strokes.length + 1);
     }
     sounds.stopBrushLoop();
   };
