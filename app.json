@@ -25,7 +25,7 @@
         "backgroundColor": "#FFF8ED"
       },
       "package": "com.tinyfin.app",
-      "versionCode": 6,
+      "versionCode": 7,
       "compileSdkVersion": 35,
       "targetSdkVersion": 35,
       "permissions": [

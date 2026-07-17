@@ -184,7 +184,7 @@ const BrushCanvas = forwardRef<BrushCanvasRef, Props>(({
       onResponderTerminate={handleEnd}
     >
       {size > 0 && (
-        <Canvas ref={canvasRef} style={{ width: size, height: size }} pointerEvents="none">
+        <Canvas ref={canvasRef} style={{ width: size, height: size }}>
           <Group>
             {strokes.map((s, i) => (
               <Path
