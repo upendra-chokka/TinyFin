@@ -1,5 +1,6 @@
 import 'react-native-gesture-handler';
 import React, { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { NavigationContainer } from '@react-navigation/native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
@@ -14,13 +15,15 @@ export default function App() {
   }, []);
 
   return (
-    <PremiumProvider>
-      <SafeAreaProvider>
-        <NavigationContainer>
-          <StatusBar style="dark" />
-          <RootNavigator />
-        </NavigationContainer>
-      </SafeAreaProvider>
-    </PremiumProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <PremiumProvider>
+        <SafeAreaProvider>
+          <NavigationContainer>
+            <StatusBar style="dark" />
+            <RootNavigator />
+          </NavigationContainer>
+        </SafeAreaProvider>
+      </PremiumProvider>
+    </GestureHandlerRootView>
   );
 }
