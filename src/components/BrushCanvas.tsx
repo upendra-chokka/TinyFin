@@ -1,8 +1,9 @@
-import React, { useEffect, useImperativeHandle, useMemo, useRef, useState, forwardRef } from 'react';
+import React, { useEffect, useImperativeHandle, useMemo, useRef, useState, forwardRef, useCallback } from 'react';
 import { View, StyleSheet, LayoutChangeEvent } from 'react-native';
 import {
-  Canvas, Path, Skia, useTouchHandler, SkPath, Group, SkiaDomView,
+  Canvas, Path, Skia, SkPath, Group, SkiaDomView,
 } from '@shopify/react-native-skia';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 import { sounds } from '../utils/sound';
 import { Shape } from '../data/shapeTypes';
@@ -87,15 +88,9 @@ export function shapeToPath(shape: Shape, scale: number): SkPath {
 }
 
 /**
- * A reusable drawing surface: renders an optional line-art outline (from
- * `outlineShapes`) and lets the user draw freehand strokes over it with a
- * marker / crayon / brush / eraser feel. Used by both the Coloring and
- * Tracing screens.
- *
- * PERF NOTE: strokes re-render via plain React state on every touch move —
- * fine for a phone/tablet coloring app, but if you want buttery 120fps
- * drawing on lower-end Android devices, migrate `currentStroke` to a
- * Skia/Reanimated shared value so point updates skip the React render cycle.
+ * A reusable drawing surface using GestureDetector (pan gesture) for touch
+ * input. Renders an optional line-art outline from `outlineShapes` and lets
+ * the user draw freehand strokes with marker/crayon/brush/eraser tools.
  */
 const BrushCanvas = forwardRef<BrushCanvasRef, Props>(({
   viewBox, outlineShapes = [], color, tool, brushSize, resetSignal, undoSignal, onStrokeEnd, transparentBg,
@@ -122,7 +117,7 @@ const BrushCanvas = forwardRef<BrushCanvasRef, Props>(({
     makeSnapshot: () => {
       if (!canvasRef.current) return null;
       try {
-        const image = canvasRef.current.makeImageSnapshot();
+        const image = (canvasRef.current as any).makeImageSnapshot();
         if (!image) return null;
         const data = image.encodeToBase64();
         return data;
@@ -137,75 +132,99 @@ const BrushCanvas = forwardRef<BrushCanvasRef, Props>(({
     if (w && w !== size) setSize(w);
   };
 
-  const touchHandler = useTouchHandler({
-    onStart: (pt) => {
-      const cfg = TOOL_CONFIG[tool];
-      const path = Skia.Path.Make();
-      path.moveTo(pt.x, pt.y);
-      currentStroke.current = {
-        path,
-        color: tool === 'eraser' ? '#FFFFFF' : color,
-        width: brushSize * cfg.widthMult,
-        opacity: cfg.opacity,
-        blend: cfg.blend,
-      };
-      sounds.startBrushLoop();
-      Haptics.selectionAsync().catch(() => {});
-      forceRender((n) => n + 1);
-    },
-    onActive: (pt) => {
-      if (!currentStroke.current) return;
-      currentStroke.current.path.lineTo(pt.x, pt.y);
-      forceRender((n) => n + 1);
-    },
-    onEnd: () => {
-      if (currentStroke.current) {
-        setStrokes((prev) => {
-          const next = [...prev, currentStroke.current!];
-          onStrokeEnd?.(next.length);
-          return next;
-        });
-        currentStroke.current = null;
-      }
-      sounds.stopBrushLoop();
-    },
-  }, [tool, color, brushSize]);
+  // Use refs to always have current tool/color/brushSize without re-creating gesture
+  const toolRef = useRef(tool);
+  const colorRef = useRef(color);
+  const brushSizeRef = useRef(brushSize);
+  toolRef.current = tool;
+  colorRef.current = color;
+  brushSizeRef.current = brushSize;
+
+  const panGesture = useMemo(() =>
+    Gesture.Pan()
+      .minDistance(0)
+      .onBegin((e) => {
+        const cfg = TOOL_CONFIG[toolRef.current];
+        const path = Skia.Path.Make();
+        path.moveTo(e.x, e.y);
+        currentStroke.current = {
+          path,
+          color: toolRef.current === 'eraser' ? '#FFFFFF' : colorRef.current,
+          width: brushSizeRef.current * cfg.widthMult,
+          opacity: cfg.opacity,
+          blend: cfg.blend,
+        };
+        sounds.startBrushLoop();
+        Haptics.selectionAsync().catch(() => {});
+        forceRender((n) => n + 1);
+      })
+      .onUpdate((e) => {
+        if (!currentStroke.current) return;
+        currentStroke.current.path.lineTo(e.x, e.y);
+        forceRender((n) => n + 1);
+      })
+      .onEnd(() => {
+        if (currentStroke.current) {
+          setStrokes((prev) => {
+            const next = [...prev, currentStroke.current!];
+            onStrokeEnd?.(next.length);
+            return next;
+          });
+          currentStroke.current = null;
+        }
+        sounds.stopBrushLoop();
+      })
+      .onFinalize(() => {
+        if (currentStroke.current) {
+          setStrokes((prev) => {
+            const next = [...prev, currentStroke.current!];
+            onStrokeEnd?.(next.length);
+            return next;
+          });
+          currentStroke.current = null;
+        }
+        sounds.stopBrushLoop();
+      }),
+    [] // stable gesture object; refs provide current values
+  );
 
   return (
     <View style={[styles.wrap, transparentBg && { backgroundColor: 'transparent' }]} onLayout={onLayout}>
       {size > 0 && (
-        <Canvas ref={canvasRef} style={{ width: size, height: size }} onTouch={touchHandler}>
-          <Group>
-            {strokes.map((s, i) => (
-              <Path
-                key={i}
-                path={s.path}
-                color={s.color}
-                style="stroke"
-                strokeWidth={s.width}
-                strokeCap="round"
-                strokeJoin="round"
-                opacity={s.opacity}
-                blendMode={s.blend}
-              />
-            ))}
-            {currentStroke.current && (
-              <Path
-                path={currentStroke.current.path}
-                color={currentStroke.current.color}
-                style="stroke"
-                strokeWidth={currentStroke.current.width}
-                strokeCap="round"
-                strokeJoin="round"
-                opacity={currentStroke.current.opacity}
-                blendMode={currentStroke.current.blend}
-              />
-            )}
-            {outlinePaths.map((p, i) => (
-              <Path key={`o${i}`} path={p} color="#2B2118" style="stroke" strokeWidth={5} strokeCap="round" strokeJoin="round" />
-            ))}
-          </Group>
-        </Canvas>
+        <GestureDetector gesture={panGesture}>
+          <Canvas ref={canvasRef} style={{ width: size, height: size }}>
+            <Group>
+              {strokes.map((s, i) => (
+                <Path
+                  key={i}
+                  path={s.path}
+                  color={s.color}
+                  style="stroke"
+                  strokeWidth={s.width}
+                  strokeCap="round"
+                  strokeJoin="round"
+                  opacity={s.opacity}
+                  blendMode={s.blend}
+                />
+              ))}
+              {currentStroke.current && (
+                <Path
+                  path={currentStroke.current.path}
+                  color={currentStroke.current.color}
+                  style="stroke"
+                  strokeWidth={currentStroke.current.width}
+                  strokeCap="round"
+                  strokeJoin="round"
+                  opacity={currentStroke.current.opacity}
+                  blendMode={currentStroke.current.blend}
+                />
+              )}
+              {outlinePaths.map((p, i) => (
+                <Path key={`o${i}`} path={p} color="#2B2118" style="stroke" strokeWidth={5} strokeCap="round" strokeJoin="round" />
+              ))}
+            </Group>
+          </Canvas>
+        </GestureDetector>
       )}
     </View>
   );
